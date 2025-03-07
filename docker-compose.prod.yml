@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/prod/Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_APP_USER_API_URL=${VITE_APP_USER_API_URL}
+      - VITE_APP_PLANS_API_URL=${VITE_APP_PLANS_API_URL}
+      - VITE_APP_AUTH_API_URL=${VITE_APP_AUTH_API_URL}
+      - VITE_APP_USER_PLAN_API_URL=${VITE_APP_USER_PLAN_API_URL}
+      - VITE_APP_BILL_API_URL=${VITE_APP_BILL_API_URL}

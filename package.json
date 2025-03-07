@@ -1,0 +1,53 @@
+{
+  "name": "pcms-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "docker:dev": "docker-compose up",
+    "docker:build": "docker build -t ghcr.io/USERNAME/pcms-frontend -f docker/prod/Dockerfile .",
+    "deploy:s3": "npm run build && aws s3 sync dist/ s3://YOUR_BUCKET_NAME --delete",
+    "deploy:docker": "npm run docker:build && docker push ghcr.io/USERNAME/pcms-frontend",
+    "deploy": "ts-node scripts/deploy.ts",
+    "deploy:prod": "cross-env NODE_ENV=production npm run deploy"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "lucide-react": "^0.460.0",
+    "pcms-frontend": "file:",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.4.1",
+    "react-modal": "^3.16.1",
+    "react-router-dom": "^7.0.1",
+    "react-toastify": "^10.0.6",
+    "tailwind-merge": "^2.5.5",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.x",
+    "@eslint/js": "^9.13.0",
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "cross-env": "^7.x",
+    "eslint": "^9.13.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.14",
+    "globals": "^15.11.0",
+    "mime-types": "^2.x",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "ts-node": "^10.x",
+    "vite": "^5.4.10"
+  }
+}
