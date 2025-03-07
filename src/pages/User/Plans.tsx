@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { X, Calendar, Plus, Loader2, Download } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { useAuth, User } from '@/context/AuthContext';
@@ -9,8 +10,25 @@ import NavigationBar from '@/components/NavigationBar';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
+// Add these constants at the top of your file
+const RATE_PER_KWH = 0.12; // Base rate per kilowatt-hour
+const DAYS_IN_MONTH = 30; // Standard month length for calculations
+const TAX_RATE = 0.08; // 8% tax rate
+
+// Add this interface
+interface BillCalculation {
+  baseCharge: number;
+  usageCharge: number;
+  daysInPeriod: number;
+  dailyRate: number;
+  totalUsage: number;
+  taxAmount: number;
+  totalAmount: number;
+}
+
 export default function PlansPage() {
   const { user } = useAuth();
+  console.log('User:', user);
   const [searchLabel, setSearchLabel] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('');
@@ -101,46 +119,134 @@ export default function PlansPage() {
     }
   };
 
-  const handleDownloadBill = async () => {
-    try {
-      console.log('Downloading usage bill');
-      const doc = new jsPDF();
-      let cumulativeAmount = 0;
-      let usageData: any[] = [];
-      const userPlans = await getUserPlans();
-  
-      for (const userPlan of userPlans) {
-        // Call the calculate API to calculate and store the bill
-        usageData.push(await calculateAndStoreBill(userPlan.userPlanId, '2023-08-17', '2023-09-17'));
-        console.log('usageData', usageData);
-        cumulativeAmount += usageData[usageData.length - 1].billAmount;
-  
-        // Append usage data to allBreakdownData
-        
-      }
 
-  
-      // Add breakdown data to the PDF
-      let currentY = 20;
-      usageData.forEach((bill: any) => {
-        doc.text(`Usage Bill Breakdown for Plan: ${bill.userPlans.planName}`, 14, currentY);
-        doc.autoTable({
-          startY: currentY + 10,
-          head: [['Date', 'Usage', 'Amount']],
-          body: [[bill.usageDate, bill.usageAmount, bill.billAmount]],
-        });
-        currentY = doc.autoTable.previous.finalY + 20;
+
+const handleDownloadBill = async () => {
+  try {
+    console.log('Generating detailed bill...');
+    const doc = new jsPDF();
+    const userPlans = await getUserPlans();
+    const approvedPlans = userPlans.filter(plan => plan.status === 'APPROVED');
+    
+    // Document Header
+    doc.setFillColor(91, 155, 107);
+    doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(24);
+    doc.text('Power Consumption Bill', 14, 25);
+
+    // Customer Information
+    doc.setTextColor(0);
+    doc.setFontSize(12);
+    let yPos = 50;
+    doc.text(`Customer: ${user?.fullName}`, 14, yPos);
+    doc.text(`Bill Date: ${format(new Date(), 'dd/MM/yyyy')}`, 14, yPos + 10);
+    
+    let totalBillAmount = 0;
+    let currentY = 80;
+
+    for (const plan of approvedPlans) {
+      const startDate = parseISO(plan.requiredFrom);
+      const endDate = parseISO(plan.requiredTo);
+      const billData = await calculateAndStoreBill(
+        plan.userPlanId!,
+        format(startDate, 'yyyy-MM-dd'),
+        format(endDate, 'yyyy-MM-dd')
+      );
+
+      // Detailed calculations
+      const calculation: BillCalculation = {
+        daysInPeriod: differenceInDays(endDate, startDate) + 1,
+        dailyRate: plan.price / DAYS_IN_MONTH,
+        baseCharge: 0,
+        usageCharge: 0,
+        totalUsage: billData.usageAmount,
+        taxAmount: 0,
+        totalAmount: 0
+      };
+
+      // Calculate charges
+      calculation.baseCharge = calculation.dailyRate * calculation.daysInPeriod;
+      calculation.usageCharge = calculation.totalUsage * RATE_PER_KWH;
+      calculation.taxAmount = (calculation.baseCharge + calculation.usageCharge) * TAX_RATE;
+      calculation.totalAmount = calculation.baseCharge + calculation.usageCharge + calculation.taxAmount;
+
+      // Add plan details to PDF
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Plan: ${plan.planName}`, 14, currentY);
+      currentY += 10;
+
+      // Add calculation breakdown
+      doc.autoTable({
+        startY: currentY,
+        head: [['Description', 'Calculation', 'Amount']],
+        body: [
+          ['Billing Period', `${format(startDate, 'dd/MM/yyyy')} to ${format(endDate, 'dd/MM/yyyy')}`, ''],
+          ['Number of Days', `${calculation.daysInPeriod} days`, ''],
+          ['Monthly Base Rate', `$${plan.price.toFixed(2)}`, ''],
+          ['Daily Rate', `$${plan.price.toFixed(2)} ÷ ${DAYS_IN_MONTH}`, `$${calculation.dailyRate.toFixed(2)}`],
+          ['Base Charge', `$${calculation.dailyRate.toFixed(2)} × ${calculation.daysInPeriod} days`, `$${calculation.baseCharge.toFixed(2)}`],
+          ['Energy Usage', `${calculation.totalUsage.toFixed(2)} kWh`, ''],
+          ['Usage Rate', `$${RATE_PER_KWH} per kWh`, ''],
+          ['Usage Charge', `${calculation.totalUsage.toFixed(2)} kWh × $${RATE_PER_KWH}`, `$${calculation.usageCharge.toFixed(2)}`],
+          ['Subtotal', '', `$${(calculation.baseCharge + calculation.usageCharge).toFixed(2)}`],
+          ['Tax (8%)', '', `$${calculation.taxAmount.toFixed(2)}`],
+          ['Total for Plan', '', `$${calculation.totalAmount.toFixed(2)}`]
+        ],
+        styles: { fontSize: 10 },
+        headStyles: {
+          fillColor: [91, 155, 107],
+          textColor: [255, 255, 255]
+        },
+        columnStyles: {
+          0: { fontStyle: 'bold' },
+          2: { halign: 'right' }
+        }
       });
-  
-      // Add cumulative amount to the PDF
-      doc.text(`Total Cumulative Amount: $${cumulativeAmount}`, 14, currentY);
-      doc.save('usage_bill.pdf');
-      toast.success('Usage bill downloaded successfully');
-    } catch (error) {
-      toast.error('Failed to download usage bill');
-    }
-  };
 
+      currentY = (doc as any).lastAutoTable.finalY + 15;
+      totalBillAmount += calculation.totalAmount;
+    }
+
+    // Add final summary
+    doc.setDrawColor(91, 155, 107);
+    doc.setLineWidth(1);
+    doc.line(14, currentY, 196, currentY);
+    currentY += 10;
+
+    doc.autoTable({
+      startY: currentY,
+      body: [
+        ['Total Amount Due', '', `$${totalBillAmount.toFixed(2)}`]
+      ],
+      styles: { 
+        fontSize: 12,
+        fontStyle: 'bold'
+      },
+      theme: 'plain',
+      columnStyles: {
+        0: { cellWidth: 140 },
+        2: { halign: 'right' }
+      }
+    });
+
+    // Add footer
+    const pageHeight = doc.internal.pageSize.height;
+    doc.setFontSize(10);
+    doc.setTextColor(128);
+    doc.text('This is a computer-generated bill. For questions, please contact support.', 14, pageHeight - 20);
+    doc.text(`Generated on ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`, 14, pageHeight - 15);
+
+    // Save the PDF
+    const fileName = `power_bill_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`;
+    doc.save(fileName);
+    toast.success('Detailed bill generated successfully');
+  } catch (error) {
+    console.error('Error generating bill:', error);
+    toast.error('Failed to generate bill');
+  }
+};
   
 useEffect(() => {
   // Initialize filteredPlans with all plans when component mounts

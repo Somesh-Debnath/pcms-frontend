@@ -61,3 +61,12 @@ export interface SubscriptionFormProps {
   onSubscribe: (data: any) => void;
   onCancel: () => void;
 }
+
+export interface BillDetails {
+  baseAmount: number;
+  usageAmount: number;
+  usageCost: number;
+  totalAmount: number;
+  dailyRate: number;
+  durationInDays: number;
+}
