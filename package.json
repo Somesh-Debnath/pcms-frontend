@@ -6,14 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
     "preview": "vite preview",
     "docker:dev": "docker-compose up",
     "docker:build": "docker build -t ghcr.io/USERNAME/pcms-frontend -f docker/prod/Dockerfile .",
     "deploy:s3": "npm run build && aws s3 sync dist/ s3://YOUR_BUCKET_NAME --delete",
     "deploy:docker": "npm run docker:build && docker push ghcr.io/USERNAME/pcms-frontend",
     "deploy": "ts-node scripts/deploy.ts",
-    "deploy:prod": "cross-env NODE_ENV=production npm run deploy"
+    "deploy:prod": "cross-env NODE_ENV=production npm run deploy",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,md}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,md}\""
   },
   "dependencies": {
     "axios": "^1.7.7",
