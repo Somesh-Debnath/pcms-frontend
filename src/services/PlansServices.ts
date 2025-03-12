@@ -39,16 +39,27 @@ export const getUserPlans = async (): Promise<UserPlan[]> => {
   }
 };
 
-export const updateUserPlanStatus = async (id: number | undefined, status: string) => {
+export const updateUserPlanStatus = async (
+  id: number | undefined, 
+  status: string, 
+  rejectionComment?: string
+) => {
   try {
-    const response = await axios.put(`${USER_PLAN_API_URL}/update-status/${id}`, {status});
+    const payload = {
+      status,
+      ...(rejectionComment && { rejectionComment })
+    };
+    
+    const response = await axios.put(
+      `${USER_PLAN_API_URL}/update-status/${id}`, 
+      payload
+    );
     return response.data;
   } catch (error) {
     console.error('Error updating user plan status:', error);
     throw error;
   }
 };
-
 export const createPlan = async (plan: Plan) : Promise<Plan> => {
   try {
     const { planId, ...payload } = plan;

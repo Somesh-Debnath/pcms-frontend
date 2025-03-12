@@ -25,13 +25,22 @@ export const getRegistrations = async () => {
   }
 };
 
-export const updateRegistration = async (id: number | undefined, status: string) => {
+export const updateRegistration = async (id: number | undefined, status: string, rejectionComment?: string) => {
   try {
-    console.log('Updating registration:', id, status);
-    const response = await axios.put(`${USER_API_URL}/update/${id}`, {status});
+    console.log('Updating registration:', id, status, rejectionComment ? `with comment: ${rejectionComment}` : '');
+    
+    // Create request payload with optional rejection comment
+    const payload: {status: string; rejectionComment?: string} = {status};
+    
+    // Only include rejectionComment if it exists and status is REJECTED
+    if (status === "REJECTED" && rejectionComment) {
+      payload.rejectionComment = rejectionComment;
+    }
+    
+    const response = await axios.put(`${USER_API_URL}/update/${id}`, payload);
     return response.data;
   } catch (error) {
-    console.error("Error approving registration:", error);
+    console.error(`Error ${status === "APPROVED" ? "approving" : "rejecting"} registration:`, error);
     throw error;
   }
 }

@@ -39,6 +39,7 @@ export interface User {
     name: string;
     price: number;
   };
+  rejectionComment?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

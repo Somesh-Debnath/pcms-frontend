@@ -43,7 +43,22 @@ const LoginPage = () => {
       setIsLoading(true);
       try {
         const user = await getUserByEmail(email);
-        if (user.status !== "APPROVED" && email !== "admin@example.com") {
+        
+          if(user.status === "REJECTED") {
+             // Display rejection reason if available
+          const rejectionMessage = user.rejectionComment 
+          ? `Your account was rejected for: ${user.rejectionComment}` 
+          : 'Your account has been rejected';
+          
+        toast.error(rejectionMessage, {
+          style: {
+            background: '#f59e0b',
+            color: '#fff',
+          },
+          autoClose: 5000, // Give users more time to read the rejection reason
+        });
+          }
+          else if (user.status !== "APPROVED" && email !== "admin@example.com") {
           toast.error('Your account is not approved yet', {
             style: {
               background: '#f59e0b',

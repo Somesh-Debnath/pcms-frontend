@@ -6,23 +6,41 @@ import ApproveRegistrationsPage from '@/pages/Admin/ApproveRegistrationsPage';
 import ApproveRequestedPlanPage from '@/pages/Admin/ApproveRequestedPlanPage';
 import RegistrationForm from '@/pages/RegistrationForm';
 import Plans from '@/pages/User/Plans';
-//import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import LoginPage from '@/pages/LoginPage';
 import ProtectedRoute from '@/router/ProtectedRoute';
+import AuthGuard from './router/AuthGuard';
 
 const App = () => {
   return (
     <AuthProvider>
       <Router>
         <Routes>
+          {/* Public routes */}
           <Route path="/register" element={<RegistrationForm />} />
           <Route path="/" element={<Navigate to="/register" />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/admin-plans" element={<ProtectedRoute component={PlansPage} permission="view_plans" />} />
-          <Route path="/approve-registrations" element={<ProtectedRoute component={ApproveRegistrationsPage} permission="approve_registrations" />} />
-          <Route path="/approve-requested-plan" element={<ProtectedRoute component={ApproveRequestedPlanPage} permission="approve_requested_plan" />} />
-          <Route path="/user-plans" element={<ProtectedRoute component={Plans} permission="view_plans" />} />
-          {/* <Route path="/unauthorized" element={<UnauthorizedPage />} /> */}
+
+          {/* Protected routes */}
+          <Route path="/admin-plans" element={
+            <AuthGuard>
+              <ProtectedRoute component={PlansPage} permission="view_plans" />
+            </AuthGuard>
+          } />
+          <Route path="/approve-registrations" element={
+            <AuthGuard>
+              <ProtectedRoute component={ApproveRegistrationsPage} permission="approve_registrations" />
+            </AuthGuard>
+          } />
+          <Route path="/approve-requested-plan" element={
+            <AuthGuard>
+              <ProtectedRoute component={ApproveRequestedPlanPage} permission="approve_requested_plan" />
+            </AuthGuard>
+          } />
+          <Route path="/user-plans" element={
+            <AuthGuard>
+              <ProtectedRoute component={Plans} permission="view_plans" />
+            </AuthGuard>
+          } />
         </Routes>
       </Router>
     </AuthProvider>

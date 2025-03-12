@@ -7,6 +7,10 @@ import { Plan, Toast, UserPlan } from '@/interfaces/interfaces';
 export default function ApproveRequestedPlanPage() {
   const [planRequests, setPlanRequests] = useState<UserPlan[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+const [showRejectModal, setShowRejectModal] = useState(false);
+const [selectedPlan, setSelectedPlan] = useState<UserPlan | null>(null);
+const [rejectionComment, setRejectionComment] = useState('');
 
   useEffect(() => {
     const loadPlanRequests = async () => {
@@ -32,17 +36,48 @@ export default function ApproveRequestedPlanPage() {
     }, 3000);
   };
 
+  const handleApproveClick = (plan: UserPlan) => {
+    setSelectedPlan(plan);
+    setShowApproveModal(true);
+  };
+  
+  const handleRejectClick = (plan: UserPlan) => {
+    setSelectedPlan(plan);
+    setShowRejectModal(true);
+    setRejectionComment('');
+  };
+  
+  // Update the handleApprove and handleReject functions
   const handleApprove = async (userPlanId: number | undefined) => {
-    console.log('Approving plan:', userPlanId);
-    await updateUserPlanStatus(userPlanId, 'approved');
-    setPlanRequests((prev) => prev.filter((plan) => plan.userPlanId !== userPlanId));
-    addToast('Plan approved successfully');
+    try {
+      console.log('Approving plan:', userPlanId);
+      await updateUserPlanStatus(userPlanId, 'approved');
+      setPlanRequests((prev) => prev.filter((plan) => plan.userPlanId !== userPlanId));
+      addToast('Plan approved successfully');
+      setShowApproveModal(false);
+      setSelectedPlan(null);
+    } catch (error) {
+      console.error('Error approving plan:', error);
+      addToast('Failed to approve plan');
+    }
   };
 
   const handleReject = async (userPlanId: number | undefined) => {
-    await updateUserPlanStatus(userPlanId, 'rejected');
-    setPlanRequests((prev) => prev.filter((plan) => plan.userPlanId !== userPlanId));
-    addToast('Plan rejected successfully');
+    try {
+      if (!rejectionComment.trim()) {
+        addToast('Please provide a rejection reason');
+        return;
+      }
+      await updateUserPlanStatus(userPlanId, 'rejected', rejectionComment);
+      setPlanRequests((prev) => prev.filter((plan) => plan.userPlanId !== userPlanId));
+      addToast('Plan rejected successfully');
+      setShowRejectModal(false);
+      setSelectedPlan(null);
+      setRejectionComment('');
+    } catch (error) {
+      console.error('Error rejecting plan:', error);
+      addToast('Failed to reject plan');
+    }
   };
 
   return (
@@ -63,13 +98,13 @@ export default function ApproveRequestedPlanPage() {
               </div>
               <div className="flex gap-4 mt-4">
                 <button
-                  onClick={() => handleApprove(plan.userPlanId)}
+                  onClick={() => handleApproveClick(plan)}
                   className="px-6 py-2 bg-[#5B9B6B] text-white rounded-md hover:bg-[#4A8A5A] transition-colors flex-1"
                 >
                   Approve
                 </button>
                 <button
-                  onClick={() => handleReject(plan.userPlanId)}
+                  onClick={() => handleRejectClick(plan)}
                   className="px-6 py-2 border border-[#5B9B6B] text-[#5B9B6B] rounded-md hover:bg-gray-50 transition-colors flex-1"
                 >
                   Reject
@@ -85,6 +120,82 @@ export default function ApproveRequestedPlanPage() {
           </div>
         )}
       </main>
+
+      {showApproveModal && selectedPlan && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <h3 className="text-lg font-semibold mb-4">Confirm Approval</h3>
+          <p className="text-gray-600 mb-6">
+            Are you sure you want to approve this plan request?
+          </p>
+          <div className="space-y-2">
+            <div className="text-sm text-gray-600">Plan: {selectedPlan.planName}</div>
+            <div className="text-sm text-gray-600">Location: {selectedPlan.location}</div>
+            <div className="text-sm text-gray-600">Requested by: {selectedPlan.requestedBy}</div>
+          </div>
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={() => handleApprove(selectedPlan.userPlanId)}
+              className="flex-1 px-4 py-2 bg-[#5B9B6B] text-white rounded-md hover:bg-[#4A8A5A]"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => {
+                setShowApproveModal(false);
+                setSelectedPlan(null);
+              }}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+{showRejectModal && selectedPlan && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <h3 className="text-lg font-semibold mb-4">Confirm Rejection</h3>
+          <div className="space-y-2 mb-4">
+            <div className="text-sm text-gray-600">Plan: {selectedPlan.planName}</div>
+            <div className="text-sm text-gray-600">Location: {selectedPlan.location}</div>
+            <div className="text-sm text-gray-600">Requested by: {selectedPlan.requestedBy}</div>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Rejection Reason
+            </label>
+            <textarea
+              value={rejectionComment}
+              onChange={(e) => setRejectionComment(e.target.value)}
+              className="w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#5B9B6B] focus:border-transparent"
+              rows={3}
+              placeholder="Please provide a reason for rejection..."
+            />
+          </div>
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={() => handleReject(selectedPlan.userPlanId)}
+              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Reject
+            </button>
+            <button
+              onClick={() => {
+                setShowRejectModal(false);
+                setSelectedPlan(null);
+                setRejectionComment('');
+              }}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
       <footer className="bg-[#5B9B6B] text-white text-center py-4 mt-8">
         All rights reserved

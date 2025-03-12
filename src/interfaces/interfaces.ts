@@ -22,6 +22,7 @@ export interface UserPlan {
   alertRequired: boolean;
   status?: string;
   plans?: Plan[];
+  rejectionComment?: string;
 }
 
 export interface SubscriptionForm {
