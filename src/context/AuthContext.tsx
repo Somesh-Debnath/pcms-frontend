@@ -5,7 +5,7 @@ import { loginApi } from '../services/AuthService';
 import { toast } from 'react-toastify';
 import { FormData } from '@/interfaces/interfaces';
 import { useNavigate } from 'react-router-dom';
-import ProtectedRoute from '@/router/ProtectedRoute';
+import { getUserByEmail } from '@/services/CustomerRegistration';
 
 interface AuthContextType {
   userRole: string;
@@ -82,21 +82,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserRole(roles.ADMIN);
         setUser({ email: "admin@example.com", role: roles.ADMIN, fullName: "admin" });
         toast.success("Admin logged in successfully!");
-        console.log("User:", user);
         navigate('/admin-plans');
-      } else {
-        const response = await loginApi(email, password);
-        setUserRole(roles.USER);
-        setUser(response);
-        toast.success("User logged in successfully!");
-        //navigate('/user-plans');
+      }
+      else {
+        const user = await getUserByEmail(email);
+
+        if (user.status === "REJECTED") {
+          // Display rejection reason if available
+          const rejectionMessage = user.rejectionComment
+            ? `Your account was rejected for: ${user.rejectionComment}`
+            : 'Your account has been rejected';
+
+          toast.error(rejectionMessage, {
+            style: {
+              background: '#f59e0b',
+              color: '#fff',
+            },
+            autoClose: 5000, // Give users more time to read the rejection reason
+          });
+        }
+        else if (user.status !== "APPROVED" && email !== "admin@example.com") {
+          toast.error('Your account is not approved yet', {
+            style: {
+              background: '#f59e0b',
+              color: '#fff',
+            },
+          });
+        }
+        else {
+          const response = await loginApi(email, password);
+          setUserRole(roles.USER);
+          setUser(response);
+          toast.success("User logged in successfully!");
+          navigate('/user-plans');
+        }
       }
     } catch (error) {
       toast.error("Invalid email or password.");
       console.error("Login error:", error);
     }
   };
-  
+
   const fetchRegistrations = async (): Promise<User[]> => {
     try {
       const response = await getRegistrations();

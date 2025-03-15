@@ -3,7 +3,6 @@ import { useAuth } from '@/context/AuthContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
-import { getUserByEmail } from '@/services/CustomerRegistration';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,39 +41,8 @@ const LoginPage = () => {
     } else {
       setIsLoading(true);
       try {
-        const user = await getUserByEmail(email);
-        
-          if(user.status === "REJECTED") {
-             // Display rejection reason if available
-          const rejectionMessage = user.rejectionComment 
-          ? `Your account was rejected for: ${user.rejectionComment}` 
-          : 'Your account has been rejected';
-          
-        toast.error(rejectionMessage, {
-          style: {
-            background: '#f59e0b',
-            color: '#fff',
-          },
-          autoClose: 5000, // Give users more time to read the rejection reason
-        });
-          }
-          else if (user.status !== "APPROVED" && email !== "admin@example.com") {
-          toast.error('Your account is not approved yet', {
-            style: {
-              background: '#f59e0b',
-              color: '#fff',
-            },
-          });
-        } else {
-          await login(email, password, navigate);
-          if (email === "admin@example.com") {
-            console.log('email', email);
-            navigate('/admin-plans');
-          } else {
-            navigate('/user-plans');
-          }
-        }
-      } catch (error) {
+        await login(email, password, navigate);
+            } catch (error) {
         toast.error('Login failed. Please check your credentials.');
       } finally {
         setIsLoading(false);
